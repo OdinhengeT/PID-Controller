@@ -11,12 +11,13 @@ CXXFLAGS := $(addprefix -, std=$(CXX_VERS) $(CXX_OPTI) $(CXX_WARN))
 # Standard Directories
 dSRC := src
 dBIN := bin
+dASM := asm
 
 # Packages
 packages := process controller 
 
 # Declaring non-file targets
-.PHONY: install settings log default done 
+.PHONY: install settings log default done assembly
 
 # Programs to be Compiled and Linked
 Programs := main.exe
@@ -24,13 +25,20 @@ Programs := main.exe
 # Defining default-target
 default: install settings log $(Programs) done
 
-main_dep := main.o process/watertank.o controller/controller.o
-main.exe: $(addprefix $(dBIN)/, $(main_dep))
+dependencies := main.o process/watertank.o controller/controller.o
+main.exe: $(addprefix $(dBIN)/, $(dependencies))
 	@$(CXX) $(CXXFLAGS) -o $@ $^
 	@echo - Created $@
 
 bin/%.o: $(dSRC)/%.cpp
 	@$(CXX) $(CXXFLAGS) -o $@ -c $^
+	@echo - Created $@
+
+# Defining assembly-target
+assembly: asm_install settings log $(addprefix $(dASM)/, $(dependencies:.o=.s)) done
+
+$(dASM)/%.s: $(dSRC)/%.cpp
+	@$(CXX) $(CXXFLAGS) -S -o $@ $^
 	@echo - Created $@
 
 # Displaying Settings
@@ -53,6 +61,11 @@ install:
 	$(foreach p,$(packages),$(call create_dir,$(addprefix $(dBIN)\,$(p))))
 	$(call create_dir,$(dSRC))
 	$(foreach p,$(packages),$(call create_dir,$(addprefix $(dSRC)\,$(p))))
+
+asm_install:
+	@echo ==Installing Assembly==
+	$(call create_dir,$(dASM)) 
+	$(foreach p,$(packages),$(call create_dir,$(addprefix $(dASM)\,$(p)))) 
 
 log: 
 	@echo ==Log==

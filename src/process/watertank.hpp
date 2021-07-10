@@ -11,14 +11,15 @@ struct watertank {
         // Pump and Outflow
         const float outflow_area;
         const float max_inflow = 1.0f;
+        float control_signal;
     public:
         watertank(float height, float base_area, float outflow_area);
         ~watertank()=default;
         void set_water_level(float level);
-        void pump_water(float control_signal);
-        void outflow();
+        void set_control_signal(float control_signal);
         float get_level();
         float get_height();
+        void active(unsigned int run_time, unsigned int tick_rate);
 };
 
 #endif

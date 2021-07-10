@@ -32,7 +32,7 @@ float controller_pi::get_control_signal() {
 void controller_pi::add_sensor_signal(float sensor_signal) {
     last_sensor_signals.push(target - sensor_signal);
     integral_value += target - sensor_signal;
-    if (last_sensor_signals.size() > 100) {
+    if (last_sensor_signals.size() > 500) {
         integral_value -= last_sensor_signals.front();
         last_sensor_signals.pop();
     }

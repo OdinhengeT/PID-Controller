@@ -25,7 +25,7 @@ Programs := main.exe
 # Defining default-target
 default: install settings log $(Programs) done
 
-dependencies := main.o process/watertank.o controller/controller.o
+dependencies := main.o process/watertank.o controller/pid.o
 main.exe: $(addprefix $(dBIN)/, $(dependencies))
 	@$(CXX) $(CXXFLAGS) -o $@ $^
 	@echo - Created $@

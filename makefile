@@ -30,14 +30,14 @@ main.exe: $(addprefix $(dBIN)/, $(dependencies))
 	@$(CXX) $(CXXFLAGS) -o $@ $^
 	@echo - Created $@
 
-bin/%.o: $(dSRC)/%.cpp
+$(addprefix $(dBIN)/, %.o): $(addprefix $(dSRC)/, %.cpp)
 	@$(CXX) $(CXXFLAGS) -o $@ -c $^
 	@echo - Created $@
 
 # Defining assembly-target
 assembly: asm_install settings log $(addprefix $(dASM)/, $(dependencies:.o=.s)) done
 
-$(dASM)/%.s: $(dSRC)/%.cpp
+$(addprefix $(dASM)/, %.s): $(addprefix $(dSRC)/, %.cpp)
 	@$(CXX) $(CXXFLAGS) -S -o $@ $^
 	@echo - Created $@
 

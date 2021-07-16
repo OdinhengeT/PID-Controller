@@ -5,35 +5,22 @@
 
 namespace controller {
     
-    class P: public Controller {
+    class P: public OnOff {
     protected:
-        bool active{false};
-        Sensor& sensor;
-        Controllable& controllable;
-        float target{0.0f};
-        float last_measure{0.0f};
         float K;
     public: 
         P(Sensor& sensor, Controllable& controllable, float K);
         ~P() = default;
 
-        void connect_sensor(Sensor& sensor) override;
-        void connect_controllable(Controllable& controllable) override;
+        virtual float get_control_signal() override;
 
-        float get_control_signal() override;
-
-        void set_target(float target) override;
         void set_K(float K);
-        
-        void start(unsigned int tick_rate) override;
-        void stop() override;
-        void reset() override;
     };
 
     class PI: public P {
-    private:
+    protected:
         float Ti;
-        float integral_value;
+        float integral_value{0.0f};
     public: 
         PI(Sensor& sensor, Controllable& controllable, float K, float Ti);
         ~PI() = default;
@@ -42,7 +29,25 @@ namespace controller {
 
         void set_Ti(float Ti);
         
-        void start(unsigned int tick_rate) override;
+        void make_measurement(unsigned int tick_rate) override;
+
+        virtual void reset() override;
+    };
+
+    class PID: public PI {
+    protected:
+        float Td;
+        float derivate_value{0.0f};
+    public:
+        PID(Sensor& sensor, Controllable& controllable, float K, float Ti, float Td);
+        ~PID() = default;
+
+        float get_control_signal() override;
+
+        void set_Td(float Td);
+
+        void make_measurement(unsigned int tick_rate) override;
+
         void reset() override;
     };
 

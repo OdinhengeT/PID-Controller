@@ -4,86 +4,75 @@
 
 #include "pid.hpp"
 
+using namespace controller;
+
 // Proportional Controller
-controller::P::P(controller::Sensor& sensor, Controllable& controllable, float K):
-    sensor{sensor}, controllable{controllable}, K{K} {
+P::P(Sensor& sensor, Controllable& controllable, float K):
+    controller::OnOff(sensor, controllable), K{K} {
 }
 
-void controller::P::connect_sensor(Sensor& sensor) {
-    this->sensor = sensor;
+float P::get_control_signal() {
+    return this->K * (this->target - last_measurements[0]);
 }
 
-void controller::P::connect_controllable(Controllable& controllable) {
-    this->controllable = controllable;
-}
-
-float controller::P::get_control_signal() {
-    return this->K * (this->target - this->last_measure);
-}
-
-void controller::P::set_target(float target) {
-    this->target = target;
-}
-
-void controller::P::set_K(float K) {
+void P::set_K(float K) {
     this->K = K;
-}
-        
-void controller::P::start(unsigned int tick_rate) {
-    this->active = true;
-    while (this->active) {
-        auto t = std::chrono::steady_clock::now() + std::chrono::milliseconds(tick_rate);
-        
-        this->last_measure = this->sensor.measure();
-
-        this->controllable.set_operating_point(this->get_control_signal());
-
-        std::this_thread::sleep_until(t);
-    }
-}
-
-void controller::P::stop() {
-    this->active = false;
-}
-
-void controller::P::reset() {
-    this->target = 0.0f;
-    this->last_measure = 0.0f;
 }
 
 // Proportional Integral Controller
 
-controller::PI::PI(Sensor& sensor, Controllable& controllable, float K, float Ti):
+PI::PI(Sensor& sensor, Controllable& controllable, float K, float Ti):
     P(sensor, controllable, K), Ti{Ti} {
 }
 
-float controller::PI::get_control_signal() {
-    return this->K * (this->target - this->last_measure + (this->integral_value / this->Ti));
+float PI::get_control_signal() {
+    return this->K * (this->target - this->last_measurements[0] + (this->integral_value / this->Ti));
 }
 
-void controller::PI::set_Ti(float Ti) {
+void PI::set_Ti(float Ti) {
     this->Ti = Ti;
 }
         
-void controller::PI::start(unsigned int tick_rate) {
-    float tick_length = tick_rate / 1000.0f;
-
-    this->active = true;
-    while (this->active) {
-        auto t = std::chrono::steady_clock::now() + std::chrono::milliseconds(tick_rate);
-
-        this->last_measure = this->sensor.measure();
-        this->integral_value += (this->target - this->last_measure) * tick_length;
-
-        this->controllable.set_operating_point(this->get_control_signal());
-        //std::cout << this->get_control_signal() << std::endl;
-
-        std::this_thread::sleep_until(t);
-    }
+void PI::make_measurement(unsigned int tick_rate) {
+    this->last_measurements[0] = this->sensor.measure();
+    this->integral_value += (this->target - this->last_measurements[0]) * tick_rate / 1000.0f;
 }
 
-void controller::PI::reset() {
+void PI::reset() {
     this->target = 0.0f;
+    this->last_measurements[0] = 0.0f;
     this->integral_value = 0.0f;
-    this->last_measure = 0.0f;
+}
+
+// Proportional Integral Derivative Controller
+
+PID::PID(Sensor& sensor, Controllable& controllable, float K, float Ti, float Td):
+    PI(sensor, controllable, K, Ti), Td{Td} {
+    this->last_measurements = {0.0f, 0.0f};
+}
+
+float PID::get_control_signal() {
+    return this->K * (this->target - this->last_measurements[0] + (this->integral_value / this->Ti));
+}
+
+void PID::set_Td(float Td) {
+    this->Td = Td;
+}
+
+void PID::make_measurement(unsigned int tick_rate) {
+    this->last_measurements.insert(this->last_measurements.begin(), this->sensor.measure());
+    if (this->last_measurements.size() > 2) this->last_measurements.pop_back();
+
+    this->integral_value += (this->target - this->last_measurements[0]) * tick_rate / 1000.0f;
+
+    float N = 10.0f;
+    this->derivate_value = (Td / (Td + N * tick_rate)) * this->derivate_value;
+    this->derivate_value -= (K * Td * N / (Td + N * tick_rate)) * (this->last_measurements[0] - this->last_measurements[1]);
+}
+
+void PID::reset() {
+    this->target = 0.0f;
+    this->last_measurements = {0.0f, 0.0f};
+    this->integral_value = 0.0f;
+    this->derivate_value = 0.0f;
 }

@@ -1,6 +1,8 @@
 #ifndef WATERTANK_H
 #define WATERTANK_H
 
+#include <thread>
+
 #include "../controller/interface_controller.hpp"
 
 struct Pump : public controller::Controllable {
@@ -17,6 +19,7 @@ struct Pump : public controller::Controllable {
 struct Watertank {
     private:
         bool active{false};
+        std::thread internal_thread{};
         float water_level;
         //Dímensions
         const float height;

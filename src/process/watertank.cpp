@@ -49,23 +49,29 @@ float Watertank::get_height() {
 
 void Watertank::start(unsigned int tick_rate) {
     this->active = true;
-    while (this->active) {
-        auto t = std::chrono::steady_clock::now() + std::chrono::milliseconds(tick_rate);
 
-        // Water outflow in accordance to Torricelli's Law
-        water_level -= tick_rate / 1000.0f * outflow_area * sqrt(19.64f * water_level);
-        if (water_level < 0.0f) water_level = 0.0f;
+    this->internal_thread = std::thread([this, tick_rate]() {
+        while (this->active) {
+            auto t = std::chrono::steady_clock::now() + std::chrono::milliseconds(tick_rate);
 
-        // Pumping in new water
-        water_level += this->pump.get_pumped_volume(tick_rate / 1000.0f) / base_area;
-        if (water_level > height) water_level = height; // Overflowing!!
+            // Water outflow in accordance to Torricelli's Law
+            this->water_level -= tick_rate / 1000.0f * this->outflow_area * sqrt(19.64f * this->water_level);
+            if (this->water_level < 0.0f) this->water_level = 0.0f;
 
-        std::this_thread::sleep_until(t);
-    }
+            // Pumping in new water
+            this->water_level += this->pump.get_pumped_volume(tick_rate / 1000.0f) / this->base_area;
+            if (this->water_level > this->height) this->water_level = this->height; // Overflowing!!
+
+            std::this_thread::sleep_until(t);
+        }
+    });
 }
 
 void Watertank::stop() {
     this->active = false;
+    if (internal_thread.joinable()) {
+        this->internal_thread.join();
+    }
 }
 
 // Sensor_Watertank

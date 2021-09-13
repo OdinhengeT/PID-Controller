@@ -1,75 +1,128 @@
-# Standard Compiler and Linker
+#	Author: OdinhengeT 
+#	Date: 2021-09-10
+
+#	Description:
+#	This is a basic makefile created to build small C++ projects (with the MSYS2 Mingw-w64 toolchain), and to support them as they grow larger.
+#	Supports: .cpp format (not .cc), compiling to assembly, Libraries and Subdirectories, 
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#	Compiler & Linker
+
+# Compiler
 CXX := g++
 
-# Standard Compiler Flags
-CXX_VERS := c++17
-CXX_OPTI := O2
-CXX_WARN := Wall Wextra pedantic-errors Wold-style-cast
+# Flags
+CXX_VERSION := c++17
+CXX_OPTIMIZATION := O2
+CXX_WARNINGS := Wall Wextra pedantic-errors Wold-style-cast
 
-CXXFLAGS := $(addprefix -, std=$(CXX_VERS) $(CXX_OPTI) $(CXX_WARN))
+CXXFLAGS := $(addprefix -, std=$(CXX_VERSION) $(CXX_OPTIMIZATION) $(CXX_WARNINGS))
 
-# Standard Directories
-dSRC := src
-dBIN := bin
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#	Directory Structure
+
+# Main Directorues 
 dASM := asm
+dBIN := bin
+dLIB := libs
+dSRC := src
 
-# Packages
-packages := process controller 
+# Subdirectories (in src)
+subDirs := controller process
 
-# Declaring non-file targets
-.PHONY: install settings log default done assembly
+# Files contained in Subdirectories
+controller := $(addprefix controller/, \
+	onoff.cpp pid.cpp \
+)
 
-# Programs to be Compiled and Linked
-Programs := main.exe
+process := $(addprefix process/, \
+	watertank.cpp \
+)
 
-# Defining default-target
-default: install settings log $(Programs) done
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#	Programs to Build
 
-dependencies := main.o process/watertank.o controller/onoff.o controller/pid.o
-main.exe: $(addprefix $(dBIN)/, $(dependencies))
-	@$(CXX) $(CXXFLAGS) -o $@ $^
-	@echo - Created $@
+Programs := main
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#	Phony & Main Targets
+
+.PHONY: assembly default done install install_assembly log settings
+
+# Default Routine Run by Make
+default: install settings log $(addsuffix .exe,$(Programs)) done
+
+# Assembly Routine
+assembly: install_assembly settings log $(addsuffix .s,$(Programs)) done
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#	main
+
+main_deps := main.cpp $(controller) $(process)
+main_libs :=
+
+# Executable Build
+main.exe: $(addprefix $(dBIN)/, $(main_deps:.cpp=.o))
+	@$(CXX) $(CXXFLAGS) -o $@ $^ $(addprefix -l, $(main_libs))
+	@echo "- Created $@"
+
+# Assembly Build 
+main.s: $(addprefix $(dASM)/, $(main_deps:.cpp=.s))
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#	Standardized Compile-routines
 
 $(addprefix $(dBIN)/, %.o): $(addprefix $(dSRC)/, %.cpp)
 	@$(CXX) $(CXXFLAGS) -o $@ -c $^
-	@echo - Created $@
-
-# Defining assembly-target
-assembly: asm_install settings log $(addprefix $(dASM)/, $(dependencies:.o=.s)) done
+	@echo "- Created $@"
 
 $(addprefix $(dASM)/, %.s): $(addprefix $(dSRC)/, %.cpp)
 	@$(CXX) $(CXXFLAGS) -S -o $@ $^
-	@echo - Created $@
+	@echo "- Created $@"
 
-# Displaying Settings
-settings:
-	@echo ==Settings==
-	@echo - Version: $(CXX) $(CXX_VERS)
-	@echo - Optimization: $(CXX_OPTI)
-	@echo - Warnings: $(CXX_WARN)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#	Functions
 
-# Initialize directories (empty line necessary)
-define create_dir
-	@if not exist "$(1)" (echo - Created \$(1))
-	@if not exist "$(1)" (mkdir $(1))
+# Initialize Directory (Empty Line IS Necessary)
+define createDirectory
+	@if [ ! -d "$(1)" ]; \
+		then echo "- Created $(1)"; \
+		mkdir $(1); \
+	fi
 
 endef
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#	Extra Targets
+
+# Display Settings (Flags ect)
+settings:
+	@echo "==Settings=="
+	@echo "- Version: $(CXX) $(CXX_VERS)"
+	@echo "- Optimization: $(CXX_OPTI)"
+	@echo "- Warnings: $(CXX_WARN)"
+
+# Install Routine
 install:
-	@echo ==Installing==
-	$(call create_dir,$(dBIN))
-	$(foreach p,$(packages),$(call create_dir,$(addprefix $(dBIN)\,$(p))))
-	$(call create_dir,$(dSRC))
-	$(foreach p,$(packages),$(call create_dir,$(addprefix $(dSRC)\,$(p))))
+	@echo "==Installing=="
+	$(call createDirectory,$(dBIN))
+	$(foreach p, $(subDirs), $(call createDirectory,$(addprefix $(dBIN)/,$(p))))
+	$(call createDirectory,$(dSRC))
+	$(foreach p, $(subDirs), $(call createDirectory,$(addprefix $(dSRC)/,$(p))))
+	$(call createDirectory,$(dLIB))
+	@echo "- Done"
 
-asm_install:
-	@echo ==Installing Assembly==
-	$(call create_dir,$(dASM)) 
-	$(foreach p,$(packages),$(call create_dir,$(addprefix $(dASM)\,$(p)))) 
+# Assembly Install Routine
+install_assembly:
+	@echo "==Installing Assembly=="
+	$(call createDirectory,$(dASM)) 
+	$(foreach p, $(subDirs), $(call createDirectory,$(addprefix $(dASM)/,$(p))))
+	@echo "- Done"
 
+# Log Message
 log: 
-	@echo ==Log==
+	@echo "==Log=="
 
-# Complete Message
+# Done Message
 done:
-	@echo ==Done==
+	@echo "==Done=="
